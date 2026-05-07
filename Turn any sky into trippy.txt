@@ -1,0 +1,70 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+
+local ROT_SPEED = math.rad(80)
+local TARGET_MESH_ID = "rbxassetid://111891702759441"
+local MIN_DISTANCE = 1
+local MAX_DISTANCE = 199
+
+
+local tool
+for _,v in player:GetDescendants() do
+	if v.Name == "SyncAPI" then tool = v.Parent end
+end
+for _,v in ReplicatedStorage:GetDescendants() do
+	if v.Name == "SyncAPI" then tool = v.Parent end
+end
+if not tool then return end
+
+local remote = tool.SyncAPI.ServerEndpoint
+local function _(args)
+	remote:InvokeServer(unpack(args))
+end
+
+local function MovePart(p,cf)
+	_({"SyncMove",{{Part=p,CFrame=cf}}})
+end
+
+
+local CENTER_CF = hrp.CFrame
+
+
+local rotatingParts = {}
+
+for _,v in Workspace:GetDescendants() do
+	if v:IsA("BasePart") then
+		local mesh = v:FindFirstChildWhichIsA("SpecialMesh")
+		if mesh and mesh.MeshId == TARGET_MESH_ID then
+			local dist = (v.Position - CENTER_CF.Position).Magnitude
+			if dist >= MIN_DISTANCE and dist <= MAX_DISTANCE then
+				table.insert(rotatingParts,{
+					part = v,
+					offset = CENTER_CF:ToObjectSpace(v.CFrame),
+					angle = 0
+				})
+			end
+		end
+	end
+end
+
+
+RunService.Heartbeat:Connect(function(dt)
+	for _,data in ipairs(rotatingParts) do
+		if data.part and data.part.Parent then
+			data.angle += ROT_SPEED * dt
+			local cf =
+				CENTER_CF
+				* CFrame.Angles(data.angle, data.angle, data.angle)
+				* data.offset
+
+			MovePart(data.part, cf)
+		end
+	end
+end)

@@ -1,0 +1,266 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local rq = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+    local player = game.Players.LocalPlayer
+    local char = player.Character
+    local backpack = player.Backpack
+    local function getf3x()
+        for _, v in ipairs(backpack:GetChildren()) do
+            if v:FindFirstChild("SyncAPI") then
+                return v
+            end
+        end
+        for _, v in ipairs(char:GetChildren()) do
+            if v:FindFirstChild("SyncAPI") then
+                return v
+            end
+        end
+        return nil
+    end
+    local f3x = getf3x()
+    if not f3x then
+        warn("you dont have f3x skid")
+        return
+    end
+    local syncapi = f3x.SyncAPI
+    local serverendpoint = syncapi.ServerEndpoint
+    local function _(args)
+        serverendpoint:InvokeServer(unpack(args))
+    end
+    local function createtexture(part, side)
+        local args = {
+            "CreateTextures",
+            {
+                {
+                    Part = part,
+                    Face = side,
+                    TextureType = "Texture"
+                }
+            }
+        }
+        _(args)
+    end
+    function mate(part,int)
+        local args = {
+            [1] = "SyncMaterial",
+            [2] = {
+                [1] = {
+                    ["Part"] = part,
+                    ["Material"] = int
+                }
+            }
+        }
+        _(args)
+    end
+    function Resize(part,size,cf)
+        local args = {
+            [1] = "SyncResize",
+            [2] = {
+                [1] = {
+                    ["Part"] = part,
+                    ["CFrame"] = cf,
+                    ["Size"] = size
+                }
+            }
+        }
+        _(args)
+    end
+    function floor(part, face)
+        local args = {
+            [1] = "SyncTexture",
+            [2] = {
+                [1] = {
+                    ["Part"] = part,
+                    ["Face"] = face,
+                    ["TextureType"] = "Texture",
+                    ["Texture"] = "rbxassetid://83901588886686",
+                    ["StudsPerTileV"] = 2,
+                    ["StudsPerTileU"] = 2
+                }
+            }
+        }
+        _(args)
+    end
+    function DestroyPart(part)
+        local args = {
+            [1] = "Remove",
+            [2] = {
+                [1] = part
+            }
+        }
+        _(args)
+    end
+    local function unanchorall()
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") or v:IsA("UnionOperation") then
+                spawn(function()
+                    DestroyPart(v)
+                end)
+            end
+        end
+    end
+    local function realm()
+        rq:InvokeServer(";punish all")
+        unanchorall()
+        task.wait(1)
+        local model_id = "Put your model here"
+        local imported_model = game:GetObjects("rbxassetid://" .. model_id)[1]
+        imported_model.Parent = game.Lighting
+        for _, v in next, imported_model:GetDescendants() do
+            pcall(function()
+                v.Anchored = true
+            end)
+        end
+        local plr = game:GetService("Players").LocalPlayer
+        local f3x_name = "Building Tools"
+        local destination = workspace
+        coroutine.wrap(function()
+            task.wait(10)
+            imported_model.Parent = nil
+        end)()
+        function f3xbuildpart(part, cframe, destination, size, transparency, colour, material, collision, fake_part)
+            local allPartsData = {}
+            table.insert(allPartsData, {
+                Type = fake_part:IsA("WedgePart") and "Wedge" or fake_part:IsA("Seat") and "Seat" or fake_part:IsA("VehicleSeat") and "VehicleSeat" or fake_part:IsA("TrussPart") and "Truss" or fake_part:IsA("SpawnLocation") and "Spawn" or
+                    fake_part.Shape == Enum.PartType.Block and "Normal" or
+                    fake_part.Shape == Enum.PartType.Ball and "Ball" or
+                    fake_part.Shape == Enum.PartType.Cylinder and "Cylinder",
+                CFrame = fake_part.CFrame,
+                Size = fake_part.Size,
+                Transparency = fake_part.Transparency,
+                Color = fake_part.Color,
+                Material = fake_part.Material,
+                Collision = fake_part.CanCollide,
+                Ref = fake_part,
+            })
+            local sync = plr.Backpack:FindFirstChild(f3x_name).SyncAPI.ServerEndpoint
+            local partMap = {}
+            for _, data in ipairs(allPartsData) do
+                local created = sync:InvokeServer("CreatePart", data.Type, data.CFrame, destination)
+                partMap[data.Ref] = created
+            end
+            for _, data in ipairs(allPartsData) do
+                local created = partMap[data.Ref]
+                if not created then continue end
+                spawn(function()
+                    if data.Size ~= Vector3.new(4,1,2) then
+                        sync:InvokeServer("SyncResize", {
+                            { Part = created, CFrame = created.CFrame, Size = data.Size }
+                        })
+                    end
+                    if data.Transparency ~= 0 then
+                        sync:InvokeServer("SyncMaterial", {
+                            { Part = created, Transparency = data.Transparency }
+                        })
+                    end
+                    if data.Color ~= BrickColor.new("Medium stone grey").Color then
+                        sync:InvokeServer("SyncColor", {
+                            { Part = created, Color = data.Color, UnionColoring = true }
+                        })
+                    end
+                    if data.Material ~= "Plastic" then
+                        sync:InvokeServer("SyncMaterial", {
+                            { Part = created, Material = data.Material }
+                        })
+                    end
+                    if data.Collision ~= true then
+                        sync:InvokeServer("SyncCollision", {
+                            { Part = created, CanCollide = data.Collision }
+                        })
+                    end
+                    local ref = data.Ref
+                    local texture = ref:FindFirstChildOfClass("Texture")
+                    if texture then
+                        sync:InvokeServer("CreateTextures", {
+                            { Part = created, Face = texture.Face, TextureType = "Texture" }
+                        })
+                        sync:InvokeServer("SyncTexture", {
+                            { Part = created, Face = texture.Face, TextureType = "Texture", StudsPerTileU = texture.StudsPerTileU, StudsPerTileV = texture.StudsPerTileV, Texture = texture.Texture, Transparency = texture.Transparency }
+                        })
+                    end
+                    local decal = ref:FindFirstChildOfClass("Decal")
+                    if decal then
+                        sync:InvokeServer("CreateTextures", {
+                            { Part = created, Face = decal.Face, TextureType = "Decal" }
+                        })
+                        sync:InvokeServer("SyncTexture", {
+                            { Part = created, Face = decal.Face, TextureType = "Decal", Texture = decal.Texture, Transparency = decal.Transparency }
+                        })
+                    end
+                    local mesh = ref:FindFirstChildOfClass("SpecialMesh")
+                    if mesh then
+                        sync:InvokeServer("CreateMeshes", {
+                            { Part = created }
+                        })
+                        sync:InvokeServer("SyncMesh", {
+                            { Part = created, MeshId = mesh.MeshId, TextureId = mesh.TextureId, Scale = mesh.Scale }
+                        })
+                    end
+                    local light1 = ref:FindFirstChildOfClass("SpotLight")
+                    if light1 then
+                        sync:InvokeServer("CreateLights", {
+                            { Part = created, LightType = "SpotLight" }
+                        })
+                        sync:InvokeServer("SyncLighting", {
+                            { Part = created, LightType = "SpotLight", Color = light1.Color, Range = light1.Range, Face = light1.Face, Angle = light1.Angle, Shadows = light1.Shadows }
+                        })
+                    end
+                    local light2 = ref:FindFirstChildOfClass("PointLight")
+                    if light2 then
+                        sync:InvokeServer("CreateLights", {
+                            { Part = created, LightType = "PointLight" }
+                        })
+                        sync:InvokeServer("SyncLighting", {
+                            { Part = created, LightType = "PointLight", Color = light2.Color, Range = light2.Range, Shadows = light2.Shadows }
+                        })
+                    end
+                end)
+            end
+        end
+        for _, part in next, imported_model:GetDescendants() do
+            local function spawnpart(fn)
+                task.spawn(fn)
+            end
+            if part:IsA("Part") then
+                if part.Shape == Enum.PartType.Block then
+                    spawnpart(function()
+                        f3xbuildpart("Normal", part.CFrame, destination, part.Size, part.Transparency, part.Color, part.Material, part.CanCollide, part)
+                    end)
+                elseif part.Shape == Enum.PartType.Ball then
+                    spawnpart(function()
+                        f3xbuildpart("Ball", part.CFrame, destination, part.Size, part.Transparency, part.Color, part.Material, part.CanCollide, part)
+                    end)
+                elseif part.Shape == Enum.PartType.Cylinder then
+                    spawnpart(function()
+                        f3xbuildpart("Cylinder", part.CFrame, destination, part.Size, part.Transparency, part.Color, part.Material, part.CanCollide, part)
+                    end)
+                end
+            elseif part:IsA("WedgePart") then
+                spawnpart(function()
+                    f3xbuildpart("Wedge", part.CFrame, destination, part.Size, part.Transparency, part.Color, part.Material, part.CanCollide, part)
+                end)
+            elseif part:IsA("Seat") then
+                spawnpart(function()
+                    f3xbuildpart("Seat", part.CFrame, destination, part.Size, part.Transparency, part.Color, part.Material, part.CanCollide, part)
+                end)
+            elseif part:IsA("TrussPart") then
+                spawnpart(function()
+                    f3xbuildpart("Truss", part.CFrame, destination, part.Size, part.Transparency, part.Color, part.Material, part.CanCollide, part)
+                end)
+            elseif part:IsA("VehicleSeat") then
+                spawnpart(function()
+                    f3xbuildpart("VehicleSeat", part.CFrame, destination, part.Size, part.Transparency, part.Color, part.Material, part.CanCollide, part)
+                end)
+            elseif part:IsA("SpawnLocation") then
+                spawnpart(function()
+                    f3xbuildpart("Spawn", part.CFrame, destination, part.Size, part.Transparency, part.Color, part.Material, part.CanCollide, part)
+                end)
+            end
+        end
+        print("Finished build.")
+        task.wait(5)
+    end
+    realm()
+    wait(8)
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+    RequestCommand:InvokeServer(";respawn all")
